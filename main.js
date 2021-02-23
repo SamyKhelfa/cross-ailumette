@@ -1,98 +1,165 @@
 const prompt = require('prompt-sync')({sigint: true})
+const readline = require('readline')
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+})
+
+let lineArray =     "*********"
+let firstLine, secondLine, thirdLine ,fourthLine, matchLefts, rangeLine, rangeMatch, countAiError
+
+let arena = [lineArray,firstLine,secondLine,thirdLine,fourthLine,lineArray]
 
 let array = [
-    [' ',' ',' ','|',' ',' ',' '],
-    [' ',' ','|','|','|',' ',' '],
-    [' ','|','|','|','|','|',' '],
-    ['|','|','|','|','|','|','|']
-]
+    "*********",
+    "*   |   *",
+    "*  |||  *",
+    "* ||||| *",
+    "*|||||||*",
+    "*********"
+    ]
 
-function render(){
-    console.log('*********')
-    for (i=0; i<array.length; i++){
-        process.stdout.write('*')
-        for (j=0; j<array[i].length; j++){
-            process.stdout.write(array[i][j])
-            
-        }
-        console.log('*')
-    }
-    console.log('*********')
+matchLefts = 16;
+
+
+
+Player()
+
+async function Player() {
+
+    console.log('Votre tour :')
+    rl.question('Ligne : ', async(numLine) => {
+
+        rl.question('Allumettes : ', async(numMatch) => {
+
+                console.log(`Le joueur a enlevé ${numMatch} allumettes de la ligne ${numLine}`)
+                for(i=0;i<numMatch;i++) {
+                    let line = array[numLine]
+                    line = line.replaceAt(line.lastIndexOf('|'),' ')
+                    array[numLine] = line
+                    matchLefts--
+                }
+                console.log(concatLine(array))
+        })
+    })
 }
 
-function checkVariable(variable){
-    if (variable == undefined){
-        return false
+String.prototype.replaceAt = function(index, replacement) {
+    return this.substr(0, index) + replacement + this.substr(index + replacement.length);
+}
+
+function concatLine(tab) {
+    let string = ""
+    for(let i = 0; i < tab.length; i++){
+        string = string + tab[i]
+        if(i != tab.length - 1){
+            string = string + "\n"
+        }
     }
-    else if(variable > 4 || variable < 1){
-        console.log('Veuillez saisir une ligne valide')
-        return false
+    return string
+}
+
+function randomRange(array) {
+    return array[Math.floor(Math.random() * array.length)]
+}
+
+async function AI() {
+    if(matchLefts==0) {
+        console.log('Vous avez perdu')
+        return EndGame()
     }
-    else if(isNaN(variable)){
-        console.log('Veuillez saisir un nombre')
-        return false
+
+    numLine = randomRange(rangeLine)
+    numMatch = randomRange(rangeMatch)
+    
+    if(arena[numLine].match(/\|/gm) == null) {
+        matchsLeftOnLine = 0
     }
     else {
-        return true
+        matchsLeftOnLine = (arena[numLine].match(/\|/gm)).length
     }
-}
-
-function countMatches(ligne){
-    let compteur = 0
-    for (i=0; i<array[ligne]; i++){
-        if(array[ligne][i] = '|'){
-            compteur ++
-        }
-    }
-    return compteur
-}
-
-function checkVariable2(variable2, ligne){
-    if (variable2 == undefined){
-        return false
-    }
-    else if (countMatches(ligne) < variable2) {
-        console.log('Il n\'y a pas assez d\'allumettes sur cette ligne')
-        return false
-    }
-    else if(isNaN(variable)){
-        console.log('Veuillez saisir un nombre')
-    }
-    else if (isNaN(variable2)){
-        console.log('Veuillez saisir un nombre')
-        return false
-    }
-    else if (variable2 <= 0){
-        console.log('Veuillez saisir un nombre positif')
-        return false
-    }
-    else{
-        return true
-    }
-}
-
-
-
-function input(){
-    let variable
-    let variable2
-    while(!checkVariable(variable - 1)){
-      variable = prompt('Quelle ligne selectionnez vous ?')
-    }
-   while(!checkVariable2(variable2, variable)){
-    variable2 = prompt("Combien d'alumettes ?")
-   }
-   return variable, variable2
     
+    if (numMatch > matchsLeftOnLine) {
+        let err=['AI',matchsLeftOnLine,numLine]
+        errFunc(err)
+    }
+    else {
+        console.log("Au tour de l'adversaire")
+        console.log(`L'adversaire a retiré ${numMatch} allumettes de la ligne ${numLine}`)
+        for(i=0;i<numMatch;i++) {
+            let line = arena[numLine]
+            line = line.replaceAt(line.lastIndexOf('|'),' ')
+            arena[numLine] = line
+            matchLefts--
+        }
+        console.log(concatLine(arena))
+        return Player()
+    }
+}
+
+function errFunc(err) {
+    if (err[0]=='joueur') {
+        if(err[1]=='ligne') {
+            if(err[2]==undefined || err[2]>4) {
+                console.log('Cette ligne est hors de portée !')
+            }
+            if(err[2]<0 || err[2]==0 || isNaN(err[2])) {
+                console.log('Vous devez choisir un nombre positif')
+            }
+        }
+        if(err[1]=='allumettes') {
+            if(err[2]>0) {
+                console.log("Pas assez d'allumettes sur cette ligne")
+            }
+            if(err[2]==0 || err[2]==undefined || err[2]<0 || isNaN(err[2])) {
+                console.log('Vous devez choisir un nombre positif !')
+            }
+        }
+        return Player()
+    }
+    if(err[0]=='Adversaire') {
+        countAiError++
+        if(err[1]==0) {
+            rangeLine.splice(rangeLine.indexOf(err[2]),1)
+        }
+        return AI()
+    }
+}
+
+function EndGame() {
+    rl.question('Voulez vous recommencer ?(y,n)',answer => {
+        answer = answer.toLowerCase()
+        if(answer=='y' || answer=='yes') {
+            console.log("C'est reparti !!")
+            return Main()
+        }
+        if(answer=='n' || answer =='no') {
+            process.exit()
+        }
+        else {
+            return EndGame()
+        }
+    })
+}
+    
+
+function InitModelArena() {
+    countAiError=0
+    matchLefts = 16
+    rangeLine = [1,2,3,4]
+    rangeMatch = [1,2,3,4,5,6]
+    arena[1] = "*   |   *"
+    arena[2] = "*  |||  *"
+    arena[3] = "* ||||| *"
+    arena[4] = "*|||||||*"
+    return console.log(concatLine(arena))
 }
 
 
 
-
-function main(){
-    render()
-    input()
+function Main() {
+    InitModelArena()
+    Player()
 }
-
-main()
 
